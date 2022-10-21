@@ -83,6 +83,8 @@ render (State b occRows occCols) =
 
 -- IMPLEMENT
 -- Make check from current state
+-- In order to check this function, there has to be the right solution for the game.
+-- To achieve that execute these commands: hint 10; toggle A0 A9 F1 F4 F5 G1 H6 I1 I8 J1
 mkCheck :: State -> Check
 mkCheck (State b _ _) = Check [Coord { col = (mod x 10), row = (div x 10)}  | x <- (elemIndices FilledBox b) ++ (elemIndices PredictBox b)]
 
