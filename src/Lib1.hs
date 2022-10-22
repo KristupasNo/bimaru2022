@@ -91,18 +91,24 @@ mkCheck (State b _ _) = Check [Coord { col = (mod x 10), row = (div x 10)}  | x 
 -- IMPLEMENT
 -- Toggle state's value
 -- Receive raw user input tokens
--- For input use string of [A, B, C, D, E, F, G, H, I, J] for row and [1, 2, 3, 4, 5, 6, 7, 8, 9, 0] for column.
--- Examples: toggle A6, toggle D0, toggle J9
+-- For input use string of [t, u] for toggle (t) or untoggle (u), [A, B, C, D, E, F, G, H, I, J] for row and [1, 2, 3, 4, 5, 6, 7, 8, 9, 0] for column.
+-- Examples: toggle tA6, toggle tD0, toggle tJ9, toggle uH8, toggle uA0
 toggle :: State -> [String] -> State
 toggle (State b r c) strs = State (funn (addGuess strs) b) r c
   where
-    fun1 x hh2 = fst $ (splitAt ((x)-1) hh2)
-    fun2 x hh2 = [PredictBox] ++ (drop 1 (snd (splitAt ((x)-1) hh2)))
+    fun1 x hh2 
+      | x > 100 = fst $ (splitAt ((x)-1-100) hh2)
+      | x <= 100 = fst $ (splitAt ((x)-1) hh2)
+      | otherwise = error "Wrong number of position"
+    fun2 x hh2 
+      | x > 100 = [EmptyBox] ++ (drop 1 (snd (splitAt ((x)-1-100) hh2)))
+      | x <= 100 = [PredictBox] ++ (drop 1 (snd (splitAt ((x)-1) hh2)))
+      | otherwise = error "Wrong number of position"
     funn [] hh1 = hh1
     funn (x:xs) hh1 = funn xs (fun1 x hh1 ++ fun2 x hh1)
 
     addGuess :: [String] -> [Int]
-    addGuess ((a:b:_):strs)  =  (checkLet  a) + (checkNum b) : addGuess strs
+    addGuess ((a:b:c:_):strs) = (checkUn a) + (checkLet b) + (checkNum c) : addGuess strs
     addGuess _ = []
     
     checkLet:: Char -> Int 
@@ -130,6 +136,11 @@ toggle (State b r c) strs = State (funn (addGuess strs) b) r c
     checkNum '8' = 9
     checkNum '9' = 10
     checkNum _ = error "Wrong input"
+
+    checkUn:: Char -> Int
+    checkUn 't' = 0
+    checkUn 'u' = 100
+    checkUn _ = error "Wrong input"
 
 -- IMPLEMENT
 -- Adds hint data to the game state
