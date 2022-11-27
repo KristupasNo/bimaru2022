@@ -1,6 +1,5 @@
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Lib1(
-    State, emptyState, gameStart, render, mkCheck, toggle, hint
+    State(State), BoxType(..), emptyState, gameStart, render, mkCheck, toggle, hint
 ) where
 
 import Types
@@ -27,6 +26,9 @@ data State = State
   }
   deriving (Show)
 
+instance Eq State where
+  (State a b c) == (State a1 b1 c1) = a == a1 && b == b1 && c == c1
+
 
 -- This is very initial state of your program
 emptyState :: State
@@ -44,10 +46,10 @@ fillList _ _ = []
 
 -- Extracts a "Document" type element by String
 getDocument :: [(String, Document)] -> String -> Document
-getDocument ((s, d) : rem) pointer
+getDocument ((s, d) : remain) pointer
   | s == pointer = d
-  | null rem = DNull
-  | otherwise = getDocument rem pointer
+  | null remain = DNull
+  | otherwise = getDocument remain pointer
 getDocument _ _ = undefined
 
 -- Converts a DList to an Int list.
@@ -61,11 +63,11 @@ getInt _ = []
 
 -- renders your game board
 render :: State -> String
-render (State b occRows occCols) =
-  "| " ++ foldr foldBoard "" (zip b [1 ..]) ++ "\n" ++ horDiv ++ "  " ++ intercalate "   " (map show occCols)
+render (State b occR occC) =
+  "| " ++ foldr foldBoard "" (zip b [1 ..]) ++ "\n" ++ horDiv ++ "  " ++ intercalate "   " (map show occC)
   where
     horDiv = replicate (4 * boardSize) '~' ++ "\n"
-    foldBoard (box, index) acc = renderBox box ++ " | " ++ endRow index occRows ++ acc
+    foldBoard (box, index) acc = renderBox box ++ " | " ++ endRow index occR ++ acc
     renderBox box = case box of
       EmptyBox -> " "
       PredictBox -> "O"
@@ -108,7 +110,7 @@ toggle (State b r c) strs = State (funn (addGuess strs) b) r c
     funn (x:xs) hh1 = funn xs (fun1 x hh1 ++ fun2 x hh1)
 
     addGuess :: [String] -> [Int]
-    addGuess ((a:b:c:_):strs) = (checkUn a) + (checkLet b) + (checkNum c) : addGuess strs
+    addGuess ((a1:b1:c1:_):strstogg) = (checkUn a1) + (checkLet b1) + (checkNum c1) : addGuess strstogg
     addGuess _ = []
     
     checkLet:: Char -> Int 
@@ -158,7 +160,7 @@ initializeHintList a b c = getIntData (tt(tt1(tt1(tt1(tt1(tt1(tt1(tt1(tt1 (tt1 (
 
 -- Parse Document.
 tt :: Document -> String -> Document
-tt (DMap ((str, d):rem)) key
+tt (DMap ((str, d):_)) key
   | str == "coords" = tt d key
   | str == "head" = tt d key
   | str == "tail" = tt d key
@@ -171,8 +173,8 @@ tt _ _ = error "Parse error"
 
 -- Parse Document.
 tt1 :: Document -> String -> Document
-tt1 (DMap ((str, d):rem)) key
-  | str == "head" = (DMap rem)
+tt1 (DMap ((str, d):remain)) key
+  | str == "head" = DMap remain
   | str == "tail" = tt1 d key
   | otherwise = tt1 d key
 tt1 DNull _ = DNull
