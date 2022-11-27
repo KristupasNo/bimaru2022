@@ -30,6 +30,20 @@ toYamlTests = testGroup "Document to yaml"
         renderDocument (DList [DString "labas", DString "sveikas"]) @?= listOfStrings
     , testCase "list of DMap" $
         renderDocument (DMap [("col", DString "labas"), ("row", DInteger 10)]) @?= listOfDMap
+    , testCase "list of 4 DMap" $
+        renderDocument (DMap [("col", DMap [("row", DMap [("labas", DInteger 99), ("labas123", DMap [("sveikas", DList [DInteger 1, DInteger 2])])])])]) @?= listOfDMap4
+  ]
+
+listOfDMap4 :: String
+listOfDMap4 = unlines [
+    "---",
+    "col: ",
+    "  row: ",
+    "    labas: 99",
+    "    labas123: ",
+    "      sveikas: ",
+    "        - 1",
+    "        - 2"
   ]
 
 stringTest :: String
@@ -96,12 +110,16 @@ gameStartTests = testGroup "Test start document"
         gameStart emptyState gameStartDoc /= Right (State (replicate 100 EmptyBox) [0,0,0,0,0,0,0,0,0,0,0] [0,0,0,0,0,0,0,0,0,0,0]),
     testCase "gameStart no less than 10 elements" $
       assertBool "Test 'gameStart no less than 10 elements' failed." $
-        gameStart emptyState gameStartDoc /= Right (State (replicate 100 EmptyBox) [0,0,0,0,0,0,0,0,0] [0,0,0,0,0,0,0,0,0])
+        gameStart emptyState gameStartDoc /= Right (State (replicate 100 EmptyBox) [0,0,0,0,0,0,0,0,0] [0,0,0,0,0,0,0,0,0]),
+    testCase "gameStart test Left" $
+      gameStart emptyState badgameStartDoc @?= Left "Error: Cannot return "
   ]
 
 gameStartDoc :: Document
 gameStartDoc = DMap [("number_of_hints",DInteger 10),("occupied_cols",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0]),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
 
+badgameStartDoc :: Document
+badgameStartDoc = DMap [("number_of_hints",DInteger 10),("occupied_cols",DList [DString "String",DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0]),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
 
 hintTests :: TestTree
 hintTests = testGroup "Test hint document" 
