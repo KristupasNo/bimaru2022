@@ -7,22 +7,22 @@ import Types ( ToDocument(..), Document(..), Check (..), Coord(..) )
 import Lib1 (State(..), BoxType(..))
 
 -- IMPLEMENT
--- First, make Check and Coord an instance of ToDocument class
+-- First, make Check an instance of ToDocument class
+instance ToDocument Check where
+    toDocument (Check c) = DMap [("coords", DList (map toDocument c))]
+
 instance ToDocument Coord where
   toDocument (Coord x y) = DMap [("row", DInteger y), ("col", DInteger x)]
-
-instance ToDocument Check where
-    toDocument (Check x) = DMap [("coords", DList (map toDocument x))]
 
 -- IMPLEMENT
 -- Renders document to yaml
 renderDocument :: Document -> String
-renderDocument dcmnt = "---\n" ++ render dcmnt 0 ""
+renderDocument doc = "---\n" ++ renderDoc doc 0 ""
 
 -- Render Document.
-render :: Document -> Int -> String -> String
-render dcmnt a sep2 = do
-    case dcmnt of
+renderDoc :: Document -> Int -> String -> String
+renderDoc doc a sep2 = do
+    case doc of
       DMap dmap -> (case length dmap of
             0 -> ""
             _ -> sep2) ++ (renderDMap dmap a)
@@ -36,26 +36,29 @@ render dcmnt a sep2 = do
 
 -- Render DMap.
 renderDMap :: [(String, Document)] -> Int -> String
-renderDMap ((key, dcmnt):remain) a
-    | null remain = (replicate (a * 2) ' ') ++ key ++ ": " ++ (render dcmnt (a + 1) "\n")
-    | key == "" = (replicate (a * 2) ' ') ++ "''" ++ ": " ++ (render dcmnt (a + 1) "\n")
-    | otherwise = (replicate (a * 2) ' ') ++ key ++ ": " ++ (render dcmnt (a + 1) "\n") ++ (renderDMap remain a)
+renderDMap ((key, doc):remain) a
+    | key == "" = (space a) ++ "''" ++ ": " ++ (renderDoc doc (a + 1) "\n")
+    | null remain = (space a) ++ key ++ ": " ++ (renderDoc doc (a + 1) "\n")
+    | otherwise = (space a) ++ key ++ ": " ++ (renderDoc doc (a + 1) "\n") ++ (renderDMap remain a)
 renderDMap [] _ = "[]" ++ "\n"
 
 -- Render Dlist.
 renderDList :: [Document] -> Int -> String
 renderDList (x:remain) a
-    | null remain = (replicate (a * 2) ' ') ++ "- " ++ (render x (a + 1) "\n")
-    | otherwise = (replicate (a * 2) ' ') ++ "- " ++ (render x (a + 1) "\n") ++ (renderDList remain a)
+    | null remain = (space a) ++ "- " ++ (renderDoc x (a + 1) "\n")
+    | otherwise = (space a) ++ "- " ++ (renderDoc x (a + 1) "\n") ++ (renderDList remain a)
 renderDList [] _ = "[]" ++ "\n"
+
+space :: Int -> String
+space n = replicate (n * 2) ' '
 
 -- IMPLEMENT
 -- This adds game data to initial state
 -- Errors are reported via Either but not error 
 gameStart :: State -> Document -> Either String State
-gameStart (State board' _ _) dcmnt = do 
-    oRows <- fillList dcmnt "occupied_rows" 
-    oCols <- fillList dcmnt "occupied_cols" 
+gameStart (State board' _ _) doc = do 
+    oRows <- fillList doc "occupied_rows" 
+    oCols <- fillList doc "occupied_cols" 
     Right  (State board' oRows oCols)
 gameStart _ _ = Left "Error: Wrong parameters "
 
@@ -70,8 +73,8 @@ fillList _ _ = Left "Error: Wrong parameters "
 
 -- Extracts a "Document" type element by String
 getDocument :: [(String, Document)] -> String -> Either String Document
-getDocument ((s, dcmnt) : remain) pointer
-  | s == pointer = Right dcmnt
+getDocument ((s, doc) : remain) pointer
+  | s == pointer = Right doc
   | null remain = Right DNull
   | otherwise = case  getDocument remain pointer of
                     Left _  -> Left "Error: Cannot return "
