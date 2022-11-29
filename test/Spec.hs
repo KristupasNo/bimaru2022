@@ -30,8 +30,19 @@ toYamlTests = testGroup "Document to yaml"
         renderDocument (DList [DString "labas", DString "sveikas"]) @?= listOfStrings
     , testCase "list of DMap" $
         renderDocument (DMap [("col", DString "labas"), ("row", DInteger 10)]) @?= listOfDMap
+    , testCase "list of 3 DMap" $
+        renderDocument (DMap [("col", DMap [("row", DMap [("labas", DInteger 99), ("sveikas",  DNull)])])]) @?= listOfDMap3
     , testCase "list of 4 DMap" $
         renderDocument (DMap [("col", DMap [("row", DMap [("labas", DInteger 99), ("labas123", DMap [("sveikas", DList [DInteger 1, DInteger 2])])])])]) @?= listOfDMap4
+  ]
+
+listOfDMap3 :: String
+listOfDMap3 = unlines [
+    "---",
+    "col: ",
+    "  row: ",
+    "    labas: 99",
+    "    sveikas: null"
   ]
 
 listOfDMap4 :: String
@@ -111,15 +122,27 @@ gameStartTests = testGroup "Test start document"
     testCase "gameStart no less than 10 elements" $
       assertBool "Test 'gameStart no less than 10 elements' failed." $
         gameStart emptyState gameStartDoc /= Right (State (replicate 100 EmptyBox) [0,0,0,0,0,0,0,0,0] [0,0,0,0,0,0,0,0,0]),
-    testCase "gameStart test Left" $
-      gameStart emptyState badgameStartDoc @?= Left "Error: Cannot return "
+    testCase "gameStart bad list" $
+      gameStart emptyState badList @?= Left "Error: Cannot return ",
+    testCase "gameStart bad key" $
+      gameStart emptyState badKey @?= Left "Error: Cannot return ",
+    testCase "gameStart bad document" $
+      gameStart emptyState (DInteger 8) @?= Left "Error: Wrong parameters ",
+    testCase "gameStart bad value of key" $
+      gameStart emptyState badKeyValue @?= Left "Error: Cannot return "
   ]
 
 gameStartDoc :: Document
 gameStartDoc = DMap [("number_of_hints",DInteger 10),("occupied_cols",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0]),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
 
-badgameStartDoc :: Document
-badgameStartDoc = DMap [("number_of_hints",DInteger 10),("occupied_cols",DList [DString "String",DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0]),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
+badList :: Document
+badList = DMap [("number_of_hints",DInteger 10),("occupied_cols",DList [DString "String",DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0]),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
+
+badKey :: Document
+badKey = DMap [("number_of_hints",DInteger 10),("occupied_labas",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0]),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
+
+badKeyValue :: Document
+badKeyValue = DMap [("number_of_hints",DInteger 10),("occupied_labas",DInteger 100),("occupied_rows",DList [DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0,DInteger 0, DInteger 0,DInteger 0,DInteger 0])]
 
 hintTests :: TestTree
 hintTests = testGroup "Test hint document" 
