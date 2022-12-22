@@ -1,16 +1,65 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+import Data.String.Conversions
+import Data.Yaml as Y ( encode )
 
+import Lib1 (State(..), BoxType(..), emptyState)
 import Lib2 (renderDocument, gameStart, hint)
+import Lib3 (parseDocument)
 import Types (Document(..))
-import Lib1 (State (..), BoxType (..), emptyState)
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" [
   toYamlTests,
+  fromYamlTests,
   gameStartTests,
-  hintTests])
+  hintTests,
+  properties])
+
+properties :: TestTree
+properties = testGroup "Properties" [golden, dogfood]
+
+golden :: TestTree
+golden = testGroup "Handles foreign rendering"
+  [
+    testProperty "parseDocument (Data.Yaml.encode doc) == doc" $
+      \doc -> parseDocument (cs (Y.encode doc)) == Right doc
+  ]
+
+dogfood :: TestTree
+dogfood = testGroup "Eating your own dogfood"
+  [  
+    testProperty "parseDocument (renderDocument doc) == doc" $
+      \doc -> parseDocument (renderDocument doc) == Right doc
+  ]
+
+fromYamlTests :: TestTree
+fromYamlTests = testGroup "Document from yaml"
+  [   testCase "null" $
+        parseDocument nullTest @?= Right DNull
+    , testCase "int" $
+        parseDocument intTest @?= Right (DInteger 5)
+    , testCase "list of ints" $
+        parseDocument listOfInts @?= Right (DList [DInteger 5, DInteger 6])
+    , testCase "DMap Int" $
+        parseDocument mapOfInt @?= Right (DMap [("row", DInteger 6)])
+    , testCase "DMap List" $
+        parseDocument mapOfList @?= Right (DMap [("row", DList [DInteger 1, DInteger 2])])
+    , testCase "String" $
+        parseDocument stringTest @?= Right (DString "labas")
+    , testCase "list of Strings" $
+        parseDocument listOfStrings @?= Right (DList [DString "labas", DString "sveikas"])
+    , testCase "list of DMap" $
+        parseDocument listOfDMap @?= Right (DMap [("col", DString "labas"), ("row", DInteger 10)])
+    , testCase "list of 3 DMap" $
+        parseDocument listOfDMap3 @?= Right (DMap [("col", DMap [("row", DMap [("labas", DInteger 99), ("sveikas",  DNull)])])])
+    , testCase "list of 4 DMap" $
+        parseDocument listOfDMap4 @?= Right (DMap [("col", DMap [("row", DMap [("labas", DInteger 99), ("labas123", DMap [("sveikas", DList [DInteger 1, DInteger 2])])])])])
+    -- IMPLEMENT more test cases:
+    --  other primitive types/values
+    --  nested types
+  ]
 
 toYamlTests :: TestTree
 toYamlTests = testGroup "Document to yaml"
@@ -36,6 +85,59 @@ toYamlTests = testGroup "Document to yaml"
         renderDocument (DMap [("col", DMap [("row", DMap [("labas", DInteger 99), ("labas123", DMap [("sveikas", DList [DInteger 1, DInteger 2])])])])]) @?= listOfDMap4
   ]
 
+nullTest :: String
+nullTest = unlines [
+    "---",
+    "null"
+  ]
+
+intTest :: String
+intTest = unlines [
+    "---",
+    "5"
+  ]
+
+listOfInts :: String
+listOfInts = unlines [
+    "---",
+    "- 5",
+    "- 6"
+  ]
+
+mapOfInt :: String
+mapOfInt = unlines [
+    "---",
+    "row: 6"
+  ]
+
+mapOfList :: String
+mapOfList = unlines [
+    "---",
+    "row: ",
+    "  - 1",
+    "  - 2"
+  ]
+
+stringTest :: String
+stringTest = unlines [
+    "---",
+    "labas"
+  ]
+
+listOfStrings :: String
+listOfStrings = unlines [
+    "---",
+    "- labas",
+    "- sveikas"
+  ]
+
+listOfDMap :: String
+listOfDMap = unlines [
+    "---",
+    "col: labas",
+    "row: 10"
+  ]
+
 listOfDMap3 :: String
 listOfDMap3 = unlines [
     "---",
@@ -56,60 +158,6 @@ listOfDMap4 = unlines [
     "        - 1",
     "        - 2"
   ]
-
-stringTest :: String
-stringTest = unlines [
-    "---",
-    "labas"
-  ]
-
-nullTest :: String
-nullTest = unlines [
-    "---",
-    "null"
-  ]
-
-intTest :: String
-intTest = unlines [
-    "---",
-    "5"
-  ]
-
-listOfInts :: String
-listOfInts = unlines [
-    "---",
-    "- 5",
-    "- 6"
-  ]
-
-listOfStrings :: String
-listOfStrings = unlines [
-    "---",
-    "- labas",
-    "- sveikas"
-  ]
-
-mapOfInt :: String
-mapOfInt = unlines [
-    "---",
-    "row: 6"
-  ]
-
-mapOfList :: String
-mapOfList = unlines [
-    "---",
-    "row: ",
-    "  - 1",
-    "  - 2"
-  ]
-
-listOfDMap :: String
-listOfDMap = unlines [
-    "---",
-    "col: labas",
-    "row: 10"
-  ]
-
 
 gameStartTests :: TestTree
 gameStartTests = testGroup "Test start document" 

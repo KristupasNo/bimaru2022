@@ -147,43 +147,53 @@ toggle (State b r c) strs = State (funn (addGuess strs) b) r c
 -- IMPLEMENT
 -- Adds hint data to the game state
 hint :: State -> Document -> State
-hint (State b r c) d = State (funn (hintPosition (initializeHintList d "col" []) (initializeHintList d "row" [])) b) r c
+hint (State b r c) d = State (funn (hintPosition (initcollist d) (initrowlist d)) b) r c
   where
     fun1 x hh2 = fst $ (splitAt ((x)-1) hh2)
     fun2 x hh2 = [FilledBox] ++ (drop 1 (snd (splitAt ((x)-1) hh2)))
     funn [] hh1 = hh1
     funn (x:xs) hh1 = funn xs (fun1 x hh1 ++ fun2 x hh1)
 
--- Make a list of hints' positions from Document.
-initializeHintList :: Document -> String -> [Int] -> [Int]
-initializeHintList a b c = getIntData (tt(tt1(tt1(tt1(tt1(tt1(tt1(tt1(tt1 (tt1 (tt1 a b) b) b) b)b)b)b)b)b)b)b) $ getIntData (tt(tt1(tt1(tt1(tt1(tt1(tt1(tt1 (tt1 (tt1 a b) b) b) b)b)b)b)b)b)b)$ getIntData (tt(tt1(tt1(tt1(tt1(tt1(tt1 (tt1 (tt1 a b) b) b) b)b)b)b)b)b) $ getIntData (tt(tt1(tt1(tt1(tt1(tt1 (tt1 (tt1 a b) b) b) b)b)b)b)b) $ getIntData (tt(tt1(tt1(tt1(tt1 (tt1 (tt1 a b) b) b) b)b)b)b) $ getIntData (tt(tt1(tt1(tt1 (tt1 (tt1 a b) b) b) b)b)b) $ getIntData (tt(tt1(tt1 (tt1 (tt1 a b) b) b) b)b) $ getIntData (tt(tt1 (tt1 (tt1 a b) b) b) b) $ getIntData (tt (tt1 (tt1 a b) b) b) $ getIntData (tt (tt1 a b) b) $ getIntData (tt a b) c
+initcollist :: Document -> [Int]
+initcollist d = getIntData (parseCol d []) []
 
--- Parse Document.
-tt :: Document -> String -> Document
-tt (DMap ((str, d):_)) key
-  | str == "coords" = tt d key
-  | str == "head" = tt d key
-  | str == "tail" = tt d key
-  | str == key = d
-tt (DMap (_:(str, d):_)) key
-  | str == key = d
-  | otherwise = error "Wrong key"
-tt DNull _ = DNull
-tt _ _ = error "Parse error"
+initrowlist :: Document -> [Int]
+initrowlist d = getIntData (parseRow d []) []
 
--- Parse Document.
-tt1 :: Document -> String -> Document
-tt1 (DMap ((str, d):remain)) key
-  | str == "head" = DMap remain
-  | str == "tail" = tt1 d key
-  | otherwise = tt1 d key
-tt1 DNull _ = DNull
-tt1 _ _ = error "Parse error"
+--Parse Document for cols.
+parseCol :: Document -> [Document] -> [Document]
+parseCol DNull d = d
+parseCol (DMap ((str, doc):remain)) d = case str of
+    "coords" -> parseCol doc d
+    "head" -> parseCol (DMap remain) (parseCol doc d)
+    "tail" -> parseCol doc d
+    "col" -> ([doc] ++ d)
+    _ -> error "Bad key"
+parseCol _ _ = error "Bad document"
 
--- Parse integer and add to the list.
-getIntData :: Document -> [Int] -> [Int]
-getIntData (DInteger x) acc = [x] ++ acc
-getIntData DNull acc = acc
+--Parse Document for rows.
+parseRow :: Document -> [Document] -> [Document]
+parseRow DNull d = d
+parseRow (DMap ((str, doc):remain)) d = case str of
+    "coords" -> parseRow doc d
+    "head" -> parseRow (DMap remain) (ttt2 doc d)
+    "tail" -> parseRow doc d
+    _ -> error "Bad key"
+parseRow _ _ = error "Bad document"
+
+--Additional function for parsing rows.
+ttt2 :: Document -> [Document] -> [Document]
+ttt2 (DMap (_:(str, doc):_)) d = case str of
+    "row" -> ([doc] ++ d)
+    _ -> error "Bad key"
+ttt2 _ _ = error "Bad document"
+
+
+-- Parse list of DInteger to list of Integers.
+getIntData :: [Document] -> [Int] -> [Int]
+getIntData [] acc = acc
+getIntData ((DInteger x):xs) acc = getIntData xs ([x] ++ acc)
+getIntData (DNull:xs) acc = getIntData xs acc
 getIntData _ _ = []
 
 -- Make hint positions on board from hint coords. Example: [1, 2, 5] [3, 4, 5] -> [32, 43, 56]
